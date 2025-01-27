@@ -15,3 +15,16 @@ Model Comparison: Compare multiple LLMs side-by-side.
 Interactive Reports: Generate detailed visual and statistical reports.
 
 Plug-and-Play Architecture: Easily integrate any LLM via APIs or SDKs.
+Installation
+
+To set up the platform, follow these steps:
+
+Prerequisites
+
+Python 3.8+
+
+pip package manager
+
+Virtual environment (recommended)
+
+Docker (optional, for containerized deployment)
