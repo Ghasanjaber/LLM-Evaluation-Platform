@@ -1,7 +1,8 @@
 # LLM Evaluation Platform
 
 ## Overview
-The LLM Evaluation Platform is designed to systematically evaluate large language models (LLMs) based on various metrics, use cases, and performance criteria. This platform enables 
+The LLM Evaluation Platform is designed to systematically evaluate large language models (LLMs) based on various metrics, use cases, and performance criteria. This platform enables
+developers, researchers, and businesses to benchmark and compare LLMs effectively.
 
 ## Features
 - **Multi-Metric Evaluation:** Evaluate LLMs based on accuracy, fluency, reasoning, and domain-specific metrics.
