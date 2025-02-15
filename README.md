@@ -15,7 +15,7 @@ developers, researchers, and businesses to benchmark and compare LLMs effectivel
 To set up the platform, follow these steps:
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.8
 - pip package manager
 - Virtual environment (recommended)
 - Docker (optional, for containerized deployment)
