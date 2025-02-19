@@ -15,7 +15,6 @@ export default function Home() {
   >([]);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
