@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       success: true,
       message: `Received: ${text}`,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to process request" },
       { status: 500 }

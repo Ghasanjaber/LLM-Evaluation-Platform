@@ -32,9 +32,16 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
+
+# cascade router request log (local metrics store)
+/.data/
+
+# local editor / agent session state
+/.claude/
 
 # typescript
 *.tsbuildinfo

@@ -1,6 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+
+/** One entry of the /api/evaluate response. */
+interface EvaluationResult {
+  model_name: string;
+  response_text: string;
+  latency_ms: number;
+  error?: boolean;
+}
 
 export default function Home() {
   const [inputText, setInputText] = useState(""); 
@@ -11,7 +20,12 @@ export default function Home() {
   ]); 
   const [isLoading, setIsLoading] = useState(false); 
   const [responses, setResponses] = useState<
-    Array<{ model: string; response: string; latency: number }>
+    Array<{
+      model: string;
+      response: string;
+      latency: number;
+      error?: boolean;
+    }>
   >([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,10 +33,10 @@ export default function Home() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    setResponses([]); 
+    setResponses([]);
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/api/evaluate", {
+      const response = await fetch("/api/evaluate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -35,29 +49,33 @@ export default function Home() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to get LLM responses. Please try again.");
-      }
-
       const data = await response.json();
-      console.log("API Response:", data);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Failed to get LLM responses. Please try again."
+        );
+      }
 
       if (Array.isArray(data)) {
         setResponses(
-          data.map((res: any) => ({
+          (data as EvaluationResult[]).map((res) => ({
             model: res.model_name,
             response: res.response_text,
-            latency: res.latency_ms, 
+            latency: res.latency_ms,
+            error: res.error,
           }))
         );
       } else {
         throw new Error("Unexpected API response format.");
       }
 
-      setInputText(""); 
-    } catch (error: any) {
-      console.error("Error:", error);
-      setError(error.message || "An unexpected error occurred.");
+      setInputText("");
+    } catch (err) {
+      console.error("Error:", err);
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -82,6 +100,12 @@ export default function Home() {
         <p className="text-gray-300">
           Enter a prompt and compare responses from multiple LLMs
         </p>
+        <Link
+          href="/router"
+          className="mt-2 inline-block text-sm text-gray-400 underline hover:text-yellow-400"
+        >
+          Cascade Router console →
+        </Link>
       </header>
 
       {}
@@ -113,7 +137,9 @@ export default function Home() {
             />
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={
+                isLoading || !inputText.trim() || selectedModels.length === 0
+              }
               className="px-6 py-3 rounded-lg bg-yellow-500 text-black hover:bg-yellow-400 transition-colors disabled:opacity-50"
             >
               {isLoading ? "Generating..." : "Submit"}
@@ -134,8 +160,13 @@ export default function Home() {
               <h3 className="font-bold mb-2 text-center text-yellow-400">
                 {res.model}
               </h3>
-              <p className="text-sm mb-1 text-gray-300">
-                <strong>Response:</strong> {res.response}
+              <p
+                className={`text-sm mb-1 whitespace-pre-wrap ${
+                  res.error ? "text-red-400" : "text-gray-300"
+                }`}
+              >
+                <strong>{res.error ? "Error:" : "Response:"}</strong>{" "}
+                {res.response}
               </p>
               <p className="text-sm text-gray-400 text-center">
                 ⏱️ <strong>Latency:</strong>{" "}
