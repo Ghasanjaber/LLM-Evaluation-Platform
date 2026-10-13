@@ -96,6 +96,12 @@ export interface RequestLogRow {
   latency_ms: number;
   /** Only populated on shadow-sampled requests. */
   baseline_cost_usd: number | null;
+  /**
+   * Outcome of the constrained Tier 1 retry attempted on a schema failure:
+   * true if it produced conforming output and Tier 2 was avoided, false if it
+   * did not and the request escalated anyway, null if no repair was attempted.
+   */
+  schema_repaired: boolean | null;
 }
 
 /** What /api/route returns to the caller. */
@@ -110,4 +116,6 @@ export interface RouteResponse {
   stage2_route: Stage2Route;
   cost_usd: number;
   latency_ms: number;
+  /** See RequestLogRow.schema_repaired. */
+  schema_repaired: boolean | null;
 }

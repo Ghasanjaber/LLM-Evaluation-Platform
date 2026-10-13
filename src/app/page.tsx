@@ -11,14 +11,19 @@ interface EvaluationResult {
   error?: boolean;
 }
 
+/** Every model comparison mode can fan out to. */
+const AVAILABLE_MODELS = [
+  "claude-opus-5",
+  "gemini-1.5-pro",
+  "gpt-4o",
+  "gpt-4o-mini",
+];
+
 export default function Home() {
-  const [inputText, setInputText] = useState(""); 
-  const [selectedModels, setSelectedModels] = useState<string[]>([
-    "gemini-1.5-pro",
-    "gpt-4",
-    "gpt-3.5-turbo",
-  ]); 
-  const [isLoading, setIsLoading] = useState(false); 
+  const [inputText, setInputText] = useState("");
+  const [selectedModels, setSelectedModels] =
+    useState<string[]>(AVAILABLE_MODELS);
+  const [isLoading, setIsLoading] = useState(false);
   const [responses, setResponses] = useState<
     Array<{
       model: string;
@@ -109,8 +114,8 @@ export default function Home() {
       </header>
 
       {}
-      <div className="flex gap-4 mb-4 justify-center">
-        {["gemini-1.5-pro", "gpt-4", "gpt-3.5-turbo"].map((model) => (
+      <div className="flex flex-wrap gap-4 mb-4 justify-center">
+        {AVAILABLE_MODELS.map((model) => (
           <label key={model} className="flex items-center gap-2 text-gray-300">
             <input
               type="checkbox"
@@ -151,7 +156,7 @@ export default function Home() {
         {error && <p className="text-red-500 mt-2">{error}</p>}
 
         {}
-        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+        <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
           {responses.map((res, index) => (
             <div
               key={index}

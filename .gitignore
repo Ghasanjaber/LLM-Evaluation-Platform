@@ -40,6 +40,9 @@ yarn-error.log*
 # cascade router request log (local metrics store)
 /.data/
 
+# vitest reporter output
+/.vitest/
+
 # local editor / agent session state
 /.claude/
 

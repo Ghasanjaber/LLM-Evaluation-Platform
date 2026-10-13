@@ -151,6 +151,26 @@ Signals are checked in the order above — free checks first. Self-consistency,
 the only signal with a marginal cost, is a fallback used only when logprobs are
 unavailable, and it still costs a fraction of a Tier 2 call.
 
+### Remedy by signal — amended after the first live run
+
+The spec above treats escalation as the remedy for every tripped signal. The
+first live run showed that is wrong for one of them, so the remedy is now chosen
+by cause:
+
+| Tripped signal | Remedy | Rationale |
+|---|---|---|
+| `logprob_low` | escalate to Tier 2 | Low confidence is a capability gap; a stronger model is the right answer. |
+| `inconsistent` | escalate to Tier 2 | Disagreement between samples likewise suggests the task is beyond the tier. |
+| `schema_fail` | **one bounded constrained retry at Tier 1, then escalate if it still fails** | A format miss is not a capability gap. Measured: all 8 escalations across a 155-request run were `schema_fail`, and Tier 2 returned non-conforming prose for the same prompts. |
+
+The repair attempt restates the constraint as a system instruction, runs at
+temperature 0, and sets `response_format: json_object` where the provider
+supports it. It is bounded by `SCHEMA_REPAIR_ATTEMPTS` (default 1): a model that
+cannot satisfy a schema must not be able to drive an unbounded spend loop. The
+outcome is recorded in `schema_repaired` so the repair's hit rate can be
+measured rather than assumed — and as of this revision it has **not** been
+measured on live traffic, only covered by mocked tests.
+
 ### Why this avoids double latency
 
 Escalation only reaches Tier 2 through two paths: a Stage 1/2 pre-classification
@@ -246,6 +266,7 @@ took.
 | `cost_usd` | float | Computed from provider pricing at call time |
 | `latency_ms` | int | End-to-end wall-clock time for the request |
 | `baseline_cost_usd` | float / null | Populated only on shadow-sampled requests |
+| `schema_repaired` | boolean / null | Outcome of the constrained Tier 1 retry on a format failure: `true` if it produced conforming output and Tier 2 was avoided, `false` if it did not and the request escalated anyway, `null` if no repair was attempted. Added after the first live run — see §11.10. |
 
 ---
 
@@ -309,11 +330,59 @@ They are deviations, not reinterpretations of the design.
    known. The metrics view extrapolates only across the Tier 1 population.
 
 6. **Pricing is a hand-entered table, not a live feed.** `config.ts` carries
-   per-million-token rates and a `PRICING_LAST_VERIFIED` marker that currently
-   reads "not yet verified". Every cost and savings figure inherits that
-   caveat until the rates are checked against the providers' pricing pages, and
-   the console prints the marker beside the headline number.
+   per-million-token rates and a `PRICING_LAST_VERIFIED` marker. The Anthropic
+   rates came from Anthropic's published pricing table (cached 2026-06-24); the
+   OpenAI and Google rates are still unchecked. Cost and savings figures inherit
+   that caveat until every rate is verified against the provider's pricing page,
+   and the console prints the marker beside the headline number.
 
 7. **Latency excludes the shadow call.** `latency_ms` is measured to the point
    the returned answer was ready, so a shadow-sampled request does not report
    inflated user-perceived latency. The shadow call happens after that mark.
+
+8. **The logprob signal's availability is a provider property, and the tier
+   choice is made to keep it.** §5 treats logprob uncertainty as a free signal
+   and self-consistency as the fallback "where logprobs are unavailable". That
+   framing understates how much rides on the choice. Tiers are
+   `gpt-4o-mini` → `gpt-4o` partly because OpenAI exposes logprobs: on a
+   provider that does not — Anthropic's Messages API exposes none — the
+   fallback stops being an edge case and becomes the only path, so every gate
+   check past schema validation pays an extra Tier 1 call, and the
+   escalation-rate view measures sampling disagreement rather than model
+   uncertainty. Measured against the 60-prompt corpus, that combined with a
+   smaller price spread roughly halves projected savings (21–26% on
+   `claude-haiku-4-5` → `claude-opus-5`, against 40–50% on the OpenAI pairing).
+   The provider adapters are interchangeable behind `callModel`, so this is a
+   one-line change in `config.ts` — the cost of making it is recorded here.
+   Note also that keeping the signal available is not the same as using it: over
+   155 live requests the gate never fired, and the threshold τ = −1.0 is
+   therefore uncalibrated for this model and workload.
+
+9. **Claude is available to comparison mode but is not a router tier.** The
+   Anthropic adapter handles `stop_reason: "refusal"` by reporting an error
+   rather than escalating: a refusal is externally observable and so would
+   qualify as an objective signal under §5, but escalating it would spend Tier 2
+   money to be declined again for the same policy reason. `claude-opus-5` also
+   carries Anthropic's server-side refusal fallback to `claude-opus-4-8`, which
+   rescues a declined request inside the same call and bills at its own rates —
+   which is why that model appears in the pricing table without being a
+   configured tier.
+
+10. **`schema_repaired` was added to the §10 log schema after the first live
+    run.** The spec had no field for it because the spec assumed escalation was
+    the remedy for every signal. Recording the repair outcome is what makes the
+    new remedy measurable instead of merely plausible; see §5's amendment.
+
+11. **Rate-limit retry is per-provider and asymmetric.** The spec is silent on
+    transport failures. The raw-`fetch` adapters (OpenAI, Gemini) share a
+    bounded `postWithRetry` — at most 3 attempts, `Retry-After` honoured as
+    seconds or an HTTP date, otherwise exponential backoff with jitter, both
+    capped at 30s. Only `429` and `5xx` are retried: a timeout may mean the
+    request was received and billed, so repeating it risks a duplicate charge.
+    A `429` is an outright rejection and safe to repeat; a `5xx` usually means
+    no work was done but does not guarantee it, so the 3-attempt bound is what
+    caps duplicate-charge exposure rather than removing it. The Anthropic adapter instead inherits the official
+    SDK's own retry policy, so the two paths have different semantics. That is
+    deliberate — not reimplementing an SDK's retry — but it means retry
+    behaviour is not uniform across providers, and the Anthropic path is
+    untested end to end.

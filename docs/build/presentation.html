@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Project Presentation — LLM Evaluation Platform &amp; Cascade Router</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm 13mm 14mm; }
+
+  :root {
+    --ink:      #16201f;
+    --ink-mid:  #3d4b49;
+    --ink-mute: #5f6d6b;
+    --rule:     #d7dedc;
+    --rule-firm:#b9c5c2;
+    --accent:   #0f6e66;
+    --accent-sf:#eaf3f1;
+    --good:     #17603a;
+    --good-sf:  #eaf2ec;
+    --warn:     #8a5a12;
+    --warn-sf:  #faf1e2;
+    --danger:   #9a2f27;
+    --danger-sf:#f8ebe9;
+    --surface:  #f6f8f7;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 8.9pt;
+    line-height: 1.44;
+    color: var(--ink);
+  }
+
+  h1, h2, h3, h4 { line-height: 1.22; margin: 0; }
+
+  h2 {
+    font-size: 13.4pt;
+    letter-spacing: -0.01em;
+    margin: 0 0 2.4mm;
+    padding-bottom: 1.6mm;
+    border-bottom: 1.6pt solid var(--accent);
+  }
+
+  h3 {
+    font-size: 10pt;
+    margin: 3.8mm 0 1.6mm;
+    color: var(--ink);
+  }
+
+  h4 {
+    font-size: 9pt;
+    margin: 3mm 0 1.2mm;
+    color: var(--accent);
+  }
+
+  p { margin: 0 0 2.1mm; }
+  ul, ol { margin: 0 0 2.1mm; padding-left: 4.6mm; }
+  li { margin-bottom: 0.8mm; }
+
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .nobreak { page-break-inside: avoid; }
+
+  /* ---------- title page ---------- */
+  .title-wrap { padding-top: 24mm; }
+  .eyebrow {
+    font-size: 8pt; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 5mm; font-weight: 700;
+  }
+  h1 { font-size: 25pt; letter-spacing: -0.022em; margin-bottom: 3mm; }
+  .subtitle { font-size: 11pt; color: var(--ink-mid); margin-bottom: 8mm; }
+
+  .meta { width: 100%; border-collapse: collapse; margin-bottom: 9mm; }
+  .meta td { padding: 1.5mm 0; border-bottom: 0.5pt solid var(--rule); vertical-align: top; }
+  .meta td:first-child {
+    width: 36mm; color: var(--ink-mute); font-size: 8.3pt;
+    text-transform: uppercase; letter-spacing: 0.07em; padding-top: 2.3mm;
+  }
+
+  /* ---------- tables ---------- */
+  table.d { width: 100%; border-collapse: collapse; margin: 0 0 2.4mm; font-size: 8.1pt; }
+  table.d th {
+    text-align: left; font-size: 7.6pt; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--ink-mute); font-weight: 700;
+    border-bottom: 1pt solid var(--rule-firm); padding: 1.2mm 2.2mm 1.2mm 0;
+  }
+  table.d td {
+    padding: 1.3mm 2.2mm 1.3mm 0; border-bottom: 0.4pt solid var(--rule);
+    vertical-align: top;
+  }
+  table.d tr:last-child td { border-bottom: none; }
+  table.d td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ---------- status chips ---------- */
+  .chip {
+    display: inline-block; font-size: 7.2pt; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 0.5mm 1.6mm; border-radius: 1mm; white-space: nowrap;
+  }
+  .m { background: var(--good-sf);   color: var(--good); }
+  .e { background: var(--warn-sf);   color: var(--warn); }
+  .k { background: var(--accent-sf); color: var(--accent); }
+  .u { background: var(--danger-sf); color: var(--danger); }
+
+  /* ---------- callouts ---------- */
+  .box {
+    border: 0.6pt solid var(--rule-firm); border-left: 2.4pt solid var(--accent);
+    background: var(--surface); padding: 2.4mm 2.8mm; margin: 0 0 2.6mm;
+    page-break-inside: avoid;
+  }
+  .box.warn   { border-left-color: var(--warn);   background: var(--warn-sf); }
+  .box.danger { border-left-color: var(--danger); background: var(--danger-sf); }
+  .box p:last-child { margin-bottom: 0; }
+  .box-title {
+    font-weight: 700; font-size: 8.6pt; text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 1.6mm; color: var(--accent);
+  }
+  .box.warn .box-title   { color: var(--warn); }
+  .box.danger .box-title { color: var(--danger); }
+
+  /* ---------- code & prompts ---------- */
+  pre, code { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  pre {
+    font-size: 7.2pt; line-height: 1.4; background: var(--surface);
+    border: 0.5pt solid var(--rule); border-radius: 1mm;
+    padding: 2mm 2.4mm; margin: 0 0 2.4mm; white-space: pre-wrap;
+    page-break-inside: avoid;
+  }
+  code { font-size: 8.4pt; background: var(--surface); padding: 0.3mm 0.9mm; border-radius: 0.7mm; }
+
+  .prompt {
+    border: 0.5pt solid var(--rule-firm); border-radius: 1mm;
+    padding: 2mm 2.4mm; margin: 0 0 2.1mm; background: #fff;
+    page-break-inside: avoid;
+  }
+  .prompt .lbl {
+    font-size: 7.2pt; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--ink-mute); font-weight: 700; margin-bottom: 1.3mm;
+  }
+  .prompt .body { font-style: italic; color: var(--ink-mid); font-size: 8.2pt; }
+
+  /* ---------- flow diagram ---------- */
+  .flow { font-family: "SF Mono", Menlo, monospace; font-size: 6.9pt; line-height: 1.42;
+          border: 0.5pt solid var(--rule); background: #fff; padding: 3mm;
+          white-space: pre; page-break-inside: avoid; margin-bottom: 3mm; }
+
+  figure { margin: 0 0 3mm; page-break-inside: avoid; }
+  figure img { width: 100%; border: 0.5pt solid var(--rule-firm); display: block; }
+  figcaption { font-size: 7.8pt; color: var(--ink-mute); margin-top: 1.4mm; }
+
+  .lede { font-size: 9.6pt; color: var(--ink-mid); margin-bottom: 3mm; }
+  .legend { font-size: 7.9pt; color: var(--ink-mute); margin-bottom: 3mm; }
+  .foot { font-size: 7.6pt; color: var(--ink-mute); border-top: 0.5pt solid var(--rule);
+          padding-top: 1.8mm; margin-top: 4mm; }
+  .two { display: flex; gap: 5mm; }
+  .two > div { flex: 1; }
+</style>
+</head>
+<body>
+
+<!-- ============ 1. TITLE ============ -->
+<section class="page">
+  <div class="title-wrap">
+    <div class="eyebrow">AI Project Presentation</div>
+    <h1>LLM Evaluation Platform<br>&amp; Cascade Router</h1>
+    <p class="subtitle">A two-tier, cost- and latency-aware inference router,
+      built with Claude Code and verified against live API traffic.</p>
+
+    <table class="meta">
+      <tr><td>Author</td><td>Ghasan Jaber</td></tr>
+      <tr><td>Submitted for</td><td>AI Specialist Engineer — DriveNets</td></tr>
+      <tr><td>Built with</td><td>Claude Code (Opus 5), Next.js 15, TypeScript, Vitest</td></tr>
+      <tr><td>Providers</td><td>OpenAI (router tiers + comparison), Google Gemini, Anthropic (comparison)</td></tr>
+      <tr><td>Repository</td><td>github.com/Ghasanjaber/LLM-Evaluation-Platform</td></tr>
+      <tr><td>Document date</td><td>13 October 2026</td></tr>
+    </table>
+
+    <div class="box">
+      <div class="box-title">How to read this document</div>
+      <p>Every quantitative claim carries a provenance label. The distinction is
+      the point of the document, not decoration:</p>
+      <p style="margin-top:2mm">
+        <span class="chip m">Measured</span> observed in a live run against a real provider &nbsp;
+        <span class="chip e">Estimated</span> extrapolated from a small sample &nbsp;<br>
+        <span class="chip k">Mocked</span> verified by tests that never contact a provider &nbsp;
+        <span class="chip u">Unverified</span> designed and reasoned, not demonstrated
+      </p>
+    </div>
+
+    <div class="box danger">
+      <div class="box-title">The single most important caveat</div>
+      <p><strong>Answer quality has never been evaluated.</strong> The router's
+      central premise — that a cheap model is good enough for prompts classified
+      "simple" — has no eval behind it. Every cost and latency figure in this
+      document is real; none of them say the answers were correct.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. EXECUTIVE SUMMARY ============ -->
+<section class="page">
+  <h2>1 · Executive summary</h2>
+
+  <h3>Problem</h3>
+  <p>The platform's original design queried every configured model for every
+  prompt. Cost scales as O(models × prompts), and most of that spend goes to the
+  most expensive model even when the prompt does not need its capability.</p>
+
+  <p>The obvious fix — call the cheap model first, ask how confident it is,
+  escalate if unsure — fails twice:</p>
+  <ul>
+    <li><strong>Latency.</strong> Every escalation pays small-model latency
+      <em>plus</em> large-model latency sequentially. Tail latency becomes worse
+      than simply calling the large model.</li>
+    <li><strong>Signal quality.</strong> Small models are confidently wrong, so
+      self-reported confidence is close to the least reliable escalation signal
+      available.</li>
+  </ul>
+
+  <h3>Goals</h3>
+  <table class="d">
+    <tr><td style="width:22mm"><strong>Goal</strong></td><td>Route most prompts to a low-cost model without materially degrading quality.</td></tr>
+    <tr><td><strong>Goal</strong></td><td>Never make an LLM call whose only purpose is deciding whether to make another LLM call.</td></tr>
+    <tr><td><strong>Goal</strong></td><td>Escalate on objective, externally observable signals — not self-rating.</td></tr>
+    <tr><td><strong>Goal</strong></td><td>Report savings against a measured baseline, not a token-count estimate.</td></tr>
+    <tr><td><strong>Non-goal</strong></td><td>Guaranteeing the cheap tier never underperforms. The router reduces that rate; it does not eliminate it.</td></tr>
+    <tr><td><strong>Non-goal</strong></td><td>Replacing side-by-side comparison mode. The router is a separate, opt-in path.</td></tr>
+  </table>
+
+  <h3>Approach</h3>
+  <p>Two decision stages run <em>before</em> any model is called — deterministic
+  regex heuristics, then a local logistic-regression classifier over a hashed
+  text embedding. Neither touches the network. A prompt that was always going to
+  need the large model goes there directly, which keeps the double-latency path
+  a minority of traffic rather than the default.</p>
+
+  <h3>Outcomes</h3>
+  <table class="d">
+    <thead><tr><th>Result</th><th class="num">Value</th><th style="width:26mm">Status</th></tr></thead>
+    <tbody>
+      <tr><td>Routed spend over 155 live requests</td><td class="num">$0.0318</td><td><span class="chip m">Measured</span></td></tr>
+      <tr><td>Naive always-Tier-2 baseline</td><td class="num">$0.0523</td><td><span class="chip e">Estimated</span></td></tr>
+      <tr><td>Cost saving</td><td class="num">≈ 40%</td><td><span class="chip e">Estimated</span></td></tr>
+      <tr><td>Fast-path share, distinct 60-prompt corpus</td><td class="num">52%</td><td><span class="chip m">Measured</span></td></tr>
+      <tr><td>Escalation rate (8 of 124 Tier 1 attempts)</td><td class="num">6.5%</td><td><span class="chip m">Measured</span></td></tr>
+      <tr><td>Fast-path latency p50 / p95</td><td class="num">856 / 1461 ms</td><td><span class="chip m">Measured</span></td></tr>
+      <tr><td>Escalated-path latency p50 / p95</td><td class="num">1499 / 1821 ms</td><td><span class="chip m">Measured</span></td></tr>
+      <tr><td>Blended latency p50 / p95</td><td class="num">908 / 1673 ms</td><td><span class="chip m">Measured</span></td></tr>
+      <tr><td>Stage 2 classification time (warm)</td><td class="num">0.07 ms</td><td><span class="chip m">Measured</span></td></tr>
+      <tr><td>Automated tests (10 files, offline)</td><td class="num">136 passing</td><td><span class="chip k">Mocked</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="box warn">
+    <div class="box-title">Two numbers that must carry their caveats</div>
+    <p><strong>The saving is an estimate.</strong> The baseline is extrapolated
+    from <strong>four</strong> shadow-sampled requests across 116 fast-path
+    requests. The direction is sound; the precision is not. Read it as "roughly
+    40%", never 39.1%, and not as a statistically robust or universally
+    applicable figure.</p>
+    <p><strong>The fast-path share is 52%, not 74.8%.</strong> The dashboard
+    shows 74.8% because the 155 logged requests include three deliberate repeat
+    passes over the 30 simple prompts, run to make 5% shadow sampling fire at
+    all. Over the distinct 60-prompt corpus it is 52% — the figure used
+    throughout this document.</p>
+  </div>
+</section>
+
+<!-- ============ 3. ARCHITECTURE ============ -->
+<section class="page">
+  <h2>2 · Architecture and routing decision flow</h2>
+
+  <p class="lede">Two independent paths over one shared provider layer. The
+  router is opt-in and does not replace comparison mode.</p>
+
+  <div class="flow">prompt
+  │
+  ├─ Stage 1 · regex heuristics                      local, ~0 ms, free
+  │    code fence · "step by step" · math operators
+  │    match ────────────────────────────────────────────────► TIER 2
+  │    no match
+  │
+  ├─ Stage 2 · logistic regression                   local, 0.07 ms warm
+  │    over FNV-1a hashed embedding, 512-dim
+  │    complex │ cold start ─────────────────────────────────► TIER 2
+  │    simple
+  │
+  ├─ TIER 1 · gpt-4o-mini
+  │
+  ├─ Escalation gate · objective signals, cheapest first
+  │    1. schema / format invalid    free ──► constrained repair, then TIER 2
+  │    2. mean token logprob &lt; τ     free ──────────────────► TIER 2
+  │    3. two samples disagree    +1 call ──────────────────► TIER 2
+  │                                (only when logprobs unavailable)
+  │
+  └─ Request logger · one row per request, on every path</div>
+
+  <div class="box">
+    <div class="box-title">The constraint that shapes everything</div>
+    <p>No LLM call is ever made whose only purpose is deciding whether to make
+    another LLM call. Both pre-query stages are local, so routing adds no network
+    tax to any request. A router that called a model to classify complexity would
+    reintroduce the exact cost and latency problem it exists to solve.</p>
+  </div>
+
+  <h3>Why the escalation signals are what they are</h3>
+  <table class="d">
+    <thead><tr><th>Signal</th><th>Applies when</th><th>Marginal cost</th></tr></thead>
+    <tbody>
+      <tr><td>Schema / format validation</td><td>Output shape is declared</td><td>free</td></tr>
+      <tr><td>Token logprob below τ</td><td>Provider exposes logprobs</td><td>free — same response</td></tr>
+      <tr><td>Self-consistency</td><td>Logprobs unavailable</td><td>+1 Tier 1 call</td></tr>
+    </tbody>
+  </table>
+  <p>Checked cheapest-first. The paid signal runs only when the free ones cannot
+  decide — a property that is invisible in output and is therefore asserted
+  directly by a test (§5).</p>
+
+  <h3>Key modules</h3>
+  <table class="d">
+    <thead><tr><th>Concern</th><th>File</th></tr></thead>
+    <tbody>
+      <tr><td>Orchestration, shadow sampling, schema repair</td><td><code>src/lib/cascade/router.ts</code></td></tr>
+      <tr><td>Stage 1 heuristics</td><td><code>src/lib/cascade/heuristics.ts</code></td></tr>
+      <tr><td>Stage 2 classifier and embedder</td><td><code>classifier.ts</code>, <code>embedding.ts</code></td></tr>
+      <tr><td>Escalation gate</td><td><code>src/lib/cascade/escalation.ts</code></td></tr>
+      <tr><td>Provider adapters, bounded retry</td><td><code>src/lib/providers.ts</code></td></tr>
+      <tr><td>Metrics — four observability views</td><td><code>src/lib/cascade/metrics.ts</code></td></tr>
+      <tr><td>Request log and its schema</td><td><code>logger.ts</code>, <code>types.ts</code></td></tr>
+      <tr><td>Tunables, pricing, tier selection</td><td><code>src/lib/cascade/config.ts</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 4. DEV PROCESS ============ -->
+<section class="page">
+  <h2>3 · Claude Code development process</h2>
+
+  <div class="box">
+    <div class="box-title">On the prompts quoted in this section</div>
+    <p>These are <strong>verbatim extracts</strong> from the Claude Code session
+    transcript for this project (22 prompts, 16 Sept – 13 Oct 2026). Trims are
+    marked […]; nothing is paraphrased. Claude Code wrote most of the
+    implementation; I set the constraints, rejected output that did not survive
+    checking, and verified every claim against artifacts before accepting it.</p>
+  </div>
+
+  <h3>Decision points that changed the design</h3>
+  <table class="d">
+    <thead><tr><th style="width:38mm">Decision</th><th>Alternative rejected</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Objective escalation signals</td><td>Ask the model to self-report confidence</td><td>Small models are confidently wrong; an uncalibrated self-rating is not a usable signal.</td></tr>
+      <tr><td>Local classifier for Stage 2</td><td>An LLM call to classify complexity</td><td>Reintroduces the cost and latency problem being solved.</td></tr>
+      <tr><td>Free heuristics before the classifier</td><td>Classifier-only routing</td><td>Zero-cost filter catches the clearest cases before spending anything.</td></tr>
+      <tr><td>5% shadow sampling</td><td>Estimate the baseline from token counts</td><td>An estimate is not a measurement. A savings number needs comparative data behind it.</td></tr>
+      <tr><td>Tiers chosen by probing the key</td><td>Trusting <code>/v1/models</code></td><td>The org-level list overstates what a project-scoped key can call (§4).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>A full iteration: initial approach → failure → revision → test</h3>
+
+  <div class="prompt">
+    <div class="lbl">1 · Framing — 16 Sept, 11:47</div>
+    <div class="body">"i want to change in the project and add this :Architecture
+    Design Document / Cascade Router / Two-tier, cost- and latency-aware routing
+    for the LLM Evaluation Platform […]"</div>
+  </div>
+
+  <p>The problem was framed by supplying a <strong>complete 13,370-character
+  architecture specification</strong> — problem statement, goals and non-goals,
+  two-stage classification, the escalation signals, benchmarking strategy,
+  metrics, design decisions, open questions and a log schema. The reasoning
+  quoted in §1 and §2 of this document originates there, not from the model.
+  Claude Code's job was to implement it and to report honestly where
+  implementation and specification diverged — it now lists eleven such points.</p>
+
+  <p><strong>Result.</strong> A working router: Stage 1 heuristics, Stage 2
+  classifier, three-signal gate, request logger, metrics dashboard. All offline
+  checks passed.</p>
+
+  <div class="prompt">
+    <div class="lbl">2 · Evidence — 17 Sept, 06:10 (quoted in full)</div>
+    <div class="body">"Run 50–100 real prompts through /router<br>
+    Mix easy and hard ones so both tiers and the escalation gate actually fire."</div>
+  </div>
+
+  <p><strong>Three findings, none visible offline.</strong> (a) <code>gpt-4</code>
+  is listed by <code>/v1/models</code> but returns 404 to project-scoped keys —
+  29 of 60 calls failed. (b) No retry existed for 429, and a 3 requests/minute
+  cap silently lost 4 of 60 prompts. (c) All 8 escalations were schema failures,
+  and the expensive model <em>did not fix them</em> (§4).</p>
+
+  <div class="prompt">
+    <div class="lbl">3 · Revision — 13 Oct, 10:08 (quoted in full)</div>
+    <div class="body">"Inspect schema validation and escalation logic. Prefer
+    structured outputs or a bounded constrained retry for formatting failures,
+    where supported. / Avoid infinite retry loops and duplicate requests. /
+    Implement or verify bounded exponential backoff for OpenAI 429 responses,
+    respecting <code>Retry-After</code> when provided. / Preserve useful error
+    reporting and ensure failed requests are accounted for accurately. / Keep
+    the implementation consistent with the existing architecture."</div>
+  </div>
+
+  <div class="prompt">
+    <div class="lbl">4 · Verification — same message (quoted in full)</div>
+    <div class="body">"Run the existing tests, typecheck, and lint. Add
+    regression tests for any changes, particularly schema recovery and
+    rate-limit handling. Use mocks for failure scenarios rather than spending
+    API credits unnecessarily.<br><br>
+    Do not claim that live API behavior has been tested unless you actually
+    tested it. Do not change expected behavior merely to make tests pass."</div>
+  </div>
+
+  <p><strong>Result.</strong> 109 → 136 tests. The new suite immediately caught a
+  defect in the retry code itself (§5). Tests, typecheck, lint and build all
+  pass.</p>
+
+  <div class="box">
+    <div class="box-title">The standing instruction that shaped the work</div>
+    <p>"Work incrementally. Inspect before editing. Preserve the existing design
+    and working features. Do not rewrite the whole application, change model
+    providers unnecessarily, or run the full live corpus without asking me
+    first." — 13 Oct, 10:08, quoted in full.</p>
+  </div>
+
+  <h3>How I directed and checked the AI</h3>
+  <ul>
+    <li><strong>Constraints before code.</strong> "Never make an LLM call to
+      decide whether to make an LLM call" ruled out an entire class of design
+      before any was written.</li>
+    <li><strong>Ran it, did not just build it.</strong> Typecheck and build both
+      passed while a duplicate provider map made a model unreachable from one
+      endpoint. Only driving the running app exposed it.</li>
+    <li><strong>Checked claims against artifacts.</strong> Test counts here come
+      from the JSON reporter; live figures were recomputed from
+      <code>.data/requests.jsonl</code>, not copied from an earlier summary.</li>
+    <li><strong>Rejected a plausible recommendation.</strong> Claude Code
+      proposed Claude Haiku → Opus on a "5× price spread" argument. The
+      arithmetic showed that pairing roughly <em>halves</em> projected savings:
+      Anthropic exposes no logprobs, so every gate check would fall through to
+      the paid self-consistency signal. The tiers stayed on OpenAI.</li>
+    <li><strong>Corrected the AI's own draft claims.</strong> Draft CV text it
+      generated said the router "eliminates" the double-latency penalty. It does
+      not — escalated prompts still pay both latencies; the design confines that
+      path to a minority. Corrected to "avoids for pre-classified prompts".</li>
+  </ul>
+</section>
+
+<!-- ============ 5. LIVE FINDINGS + CASE STUDY ============ -->
+<section class="page">
+  <h2>4 · Live findings and the schema-failure case study</h2>
+
+  <figure>
+    <img src="dashboard.png" alt="Cascade Router observability dashboard showing cost, tier distribution, latency percentiles by path, and escalation reasons">
+    <figcaption>The <code>/router</code> dashboard over the 155 logged requests.
+    Note the savings figure carries its <em>shadow-sampled, n=5%</em> label
+    inline, and that "Token logprob below τ" reads 0. The 74.8% tile is the
+    repeat-pass artefact described in §1 — the distinct-corpus share is 52%.</figcaption>
+  </figure>
+
+  <h3>Case study — escalation was the wrong remedy</h3>
+
+  <p><strong>Observation.</strong> Across 155 live requests, all 8 escalations
+  were <code>schema_fail</code>. Not one was triggered by the logprob gate.</p>
+
+  <div class="box warn">
+    <div class="box-title">Why the logprob gate never fired — threshold, not wiring</div>
+    <p>The request log stores no logprob values, so this was established
+    indirectly. Logprobs <em>were</em> requested and returned: Tier 1 is an
+    OpenAI model, <code>wantLogprobs</code> is set for it, and a direct probe
+    confirmed <code>gpt-4o-mini</code> returns them. Decisively, had they been
+    absent the gate would have fallen through to self-consistency on every
+    fast-path request — doubling the Tier 1 calls. It did not:
+    <strong>0 of 116</strong> fast-path rows show doubled token counts (median
+    <code>tokens_in</code> = 15, max 25), and there are <strong>0</strong>
+    <code>inconsistent</code> escalations. So the values were present, read, and
+    simply never fell below τ = −1.0. <strong>The threshold is uncalibrated for
+    this model and workload, not broken.</strong> It has been left unchanged
+    pending calibration against real logprob distributions.</p>
+  </div>
+
+  <p><strong>Probe.</strong> Asked for a two-letter ISO country code under the
+  schema <code>^[A-Z]{2}$</code>, Tier 1 returned prose. The request escalated to
+  <code>gpt-4o</code>, which returned:</p>
+
+  <pre>The ISO 3166-1 alpha-2 code for Norway is "NO".</pre>
+
+  <p>Also prose. Also a schema violation. <strong>The router had paid the expensive tier to reproduce the same failure.</strong></p>
+
+  <div class="box danger">
+    <div class="box-title">Diagnosis</div>
+    <p>A formatting miss is not a capability gap. The design had assumed one
+    remedy — escalate — for all three signals, and that assumption was wrong for
+    the signal that turned out to fire most. A larger model is the right answer
+    to "this model isn't smart enough" and the wrong answer to "this model didn't
+    follow the output contract".</p>
+  </div>
+
+  <h3>The fix: remedy chosen by cause</h3>
+  <table class="d">
+    <thead><tr><th>Tripped signal</th><th>Remedy now</th><th>Rationale</th></tr></thead>
+    <tbody>
+      <tr><td><code>logprob_low</code></td><td>Escalate to Tier 2</td><td>Low confidence is a capability gap.</td></tr>
+      <tr><td><code>inconsistent</code></td><td>Escalate to Tier 2</td><td>Sample disagreement likewise suggests the task exceeds the tier.</td></tr>
+      <tr><td><code>schema_fail</code></td><td><strong>One bounded constrained retry at Tier 1</strong>, then escalate if still failing</td><td>Addresses the actual cause on the tier whose list price is 16.7× lower (gpt-4o : gpt-4o-mini list ratio, not a measured per-request saving).</td></tr>
+    </tbody>
+  </table>
+
+  <p>The repair restates the constraint as a system instruction, runs at
+  temperature 0, and sets <code>response_format: json_object</code> where the
+  model supports it. It is bounded by <code>SCHEMA_REPAIR_ATTEMPTS</code>
+  (default 1) so a model that cannot satisfy a schema cannot drive unbounded
+  spend. The outcome is recorded in a new <code>schema_repaired</code> log field.</p>
+
+  <div class="box warn">
+    <div class="box-title">What is not yet known about this fix</div>
+    <p>Its control flow is covered by mocked tests. <strong>Its live success rate
+    is unmeasured.</strong> Whether a real model obeys the repair instruction
+    often enough to beat escalating is reasoned, not demonstrated. The field
+    exists precisely so that becomes measurable — and
+    <code>schema_repaired</code> appears in <strong>0 of the 155</strong> logged
+    rows, because that data predates the change.</p>
+  </div>
+
+  <h3>The other two live findings</h3>
+
+  <h4>A model that is listed but not callable</h4>
+  <p><code>gpt-4</code> appears in <code>GET /v1/models</code> for this account
+  yet returns <em>404 — does not exist or you do not have access</em> to a
+  project-scoped (<code>sk-proj-…</code>) key whose allowlist excludes it. The
+  org-level list overstates what a given key can call. Tiers were then selected
+  by probing the key directly: <code>gpt-4o-mini</code> → <code>gpt-4o</code>, a
+  16.7× spread with logprobs available on both.</p>
+
+  <h4>No retry on rate limits</h4>
+  <p>The account is capped at 3 requests/minute on <code>gpt-4o</code>; the
+  raw-<code>fetch</code> adapters had no retry at all, so 4 of 60 prompts simply
+  failed. They now retry with bounded backoff: at most 3 attempts,
+  <code>Retry-After</code> honoured as delta-seconds or HTTP date, otherwise
+  exponential backoff with jitter, both capped at 30 s.</p>
+
+  <div class="box">
+    <div class="box-title">A deliberate decision: timeouts are not retried</div>
+    <p>Only explicit <code>429</code> and <code>5xx</code> responses are
+    retried; network errors and timeouts are not. A timed-out request may have
+    been received and billed, so repeating it risks a duplicate charge and a
+    duplicate completion. A <code>429</code> is an outright rejection, so a
+    repeat is safe. A <code>5xx</code> usually means the work was not done, but
+    that is not guaranteed — which is why the 3-attempt bound matters: it caps
+    the duplicate-charge exposure rather than eliminating it.</p>
+  </div>
+</section>
+
+<!-- ============ 6. TESTING ============ -->
+<section class="page">
+  <h2>5 · Testing strategy</h2>
+
+  <p class="lede"><strong>136 tests, 10 files, roughly 250 ms, entirely offline.</strong>
+  API keys are blanked in <code>vitest.config.mts</code>, so a test that reaches
+  a provider is a failing test.</p>
+
+  <table class="d">
+    <thead><tr><th>File</th><th class="num">Tests</th><th style="width:26mm">Layer</th><th>What it covers</th></tr></thead>
+    <tbody>
+      <tr><td><code>heuristics</code></td><td class="num">21</td><td>Unit</td><td>Every Stage 1 rule in both directions — over-matching forfeits savings, under-matching sends hard prompts to the weak tier.</td></tr>
+      <tr><td><code>embedding</code></td><td class="num">10</td><td>Unit</td><td>Determinism, L2 normalisation, zero-vector on empty input, stable embedder id (the trained weights are bound to it).</td></tr>
+      <tr><td><code>classifier</code></td><td class="num">8</td><td>Unit</td><td>Sigmoid overflow bounds, monotonicity, cold-start reporting, provenance.</td></tr>
+      <tr><td><code>escalation</code></td><td class="num">20</td><td>Unit + behavioural</td><td>Each signal, plus <strong>signal ordering</strong> — asserted with a spy that fails if the paid resample is reached.</td></tr>
+      <tr><td><code>pricing</code></td><td class="num">7</td><td>Unit</td><td>Cost arithmetic, linearity, and the invariant that Tier 1 is strictly cheaper than Tier 2.</td></tr>
+      <tr><td><code>metrics</code></td><td class="num">21</td><td>Unit</td><td>Percentile edges and <strong>honesty properties</strong>: no baseline without a sample, null not zero on an empty log, negative savings surfaced not hidden.</td></tr>
+      <tr><td><code>retry</code></td><td class="num">14</td><td>Unit</td><td><code>Retry-After</code> as seconds and as HTTP date, caps, jitter, bounded worst case.</td></tr>
+      <tr><td><code>router</code></td><td class="num">14</td><td>Integration</td><td>Decision → correct model called; every caused call billed; one log row per path; field set checked against the design document.</td></tr>
+      <tr><td><code>repair</code></td><td class="num">13</td><td>Integration</td><td>Full repair flow: success avoids Tier 2, failure escalates, boundedness, and the three cases where repair must not fire.</td></tr>
+      <tr><td><code>routing.golden</code></td><td class="num">8</td><td>Golden output</td><td>Aggregate routing across all 60 corpus prompts pinned to {31, 15, 14}; known-misroute tracking; Stage 2 latency budget.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>How the layers fit together</h3>
+  <p>Each layer exists because the one below it cannot see a particular class of
+  defect:</p>
+  <ul>
+    <li><strong>Unit</strong> tests catch rule errors in isolation, but cannot
+      see cost.</li>
+    <li><strong>Behavioural</strong> tests catch regressions that produce
+      <em>identical output</em> and cost more. Verified by mutation: removing
+      the gate's short-circuit on healthy logprobs changes no response and
+      doubles fast-path cost — four tests across two files fail.</li>
+    <li><strong>Golden output</strong> pins the aggregate routing distribution,
+      because cost follows directly from those three numbers. A drift in routing
+      is a drift in the savings claim.</li>
+    <li><strong>Integration</strong> tests catch wiring the others cannot see —
+      that a decision actually reaches the right model and that every call made
+      is billed.</li>
+    <li><strong>Running the application</strong> remains its own layer. A
+      duplicate provider map passed typecheck, lint and build, and was caught
+      only by driving the live app.</li>
+  </ul>
+
+  <div class="box">
+    <div class="box-title">Known defects are tracked, not hidden</div>
+    <p>The golden test holds a <code>KNOWN_MISROUTES</code> map of five prompts
+    the classifier routes against intent, with a diagnosed cause: every complex
+    training example opens with an imperative verb, so the model learned
+    "imperative ⇒ complex" and trips on <em>Return</em>, <em>List</em>, <em>Fix</em>.
+    Holdout accuracy of 86.7% did not surface this; running the corpus did. The
+    map is deliberately not a relabelling — the test fails on a <em>new</em>
+    misroute and also when one is <em>fixed</em>.</p>
+  </div>
+
+  <h3>What each gate has actually caught</h3>
+  <table class="d">
+    <thead><tr><th style="width:26mm">Gate</th><th>Real defect</th></tr></thead>
+    <tbody>
+      <tr><td>Running the app</td><td>Duplicate provider map made <code>claude-opus-5</code> unreachable from one endpoint while the router handled it. Typecheck and build both passed.</td></tr>
+      <tr><td>Live API run</td><td>Three defects invisible offline: <code>gpt-4</code> listed but 404 for project-scoped keys (29 of 60 calls failed); no 429 retry (4 of 60 lost); escalation does not repair schema failures (§4).</td></tr>
+      <tr><td><code>npm test</code></td><td>A negative <code>Retry-After</code> fell through to <code>Date.parse("-5")</code>, which succeeds as a past date, yielding a <strong>0 ms</strong> delay — a hot-retry loop.</td></tr>
+      <tr><td><code>npm test</code></td><td>A test asserted p50 of [100,120] was 120; nearest-rank makes it 100. <em>The test was wrong, the code was right.</em></td></tr>
+      <tr><td><code>tsc</code></td><td>A type error in a test file that passed at runtime — Vitest does not typecheck.</td></tr>
+      <tr><td><code>next lint</code></td><td>An unused parameter introduced by the fix for that.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 7. NOT TESTED ============ -->
+<section class="page">
+  <h2>6 · What was not tested, and accepted risks</h2>
+
+  <p class="lede">Ordered by how much each would matter in production.</p>
+
+  <table class="d">
+    <thead><tr><th style="width:44mm">Not covered</th><th>Risk accepted</th><th style="width:24mm">Status</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Answer quality at either tier</strong></td>
+        <td>The router's core premise has no eval behind it. Nothing verifies that the cheap tier is good enough, or that escalating yields a better answer. <strong>The largest accepted risk in the project.</strong></td>
+        <td><span class="chip u">Unverified</span></td>
+      </tr>
+      <tr>
+        <td>Schema repair on live traffic</td>
+        <td>Control flow is covered by mocked tests; the real hit rate is unknown, so "cheaper than escalating" is reasoned, not demonstrated.</td>
+        <td><span class="chip u">Unverified</span></td>
+      </tr>
+      <tr>
+        <td>Retry policy against a live 429</td>
+        <td>Unit-tested only. Reproducing a real rate limit means deliberately burning quota, so the policy has not been re-validated end to end since the failure that motivated it.</td>
+        <td><span class="chip u">Unverified</span></td>
+      </tr>
+      <tr>
+        <td>Provider adapters against real APIs</td>
+        <td>No recorded fixtures. A provider changing its response shape breaks parsing and no test catches it; mitigated only by the adapters being thin and failing loudly.</td>
+        <td><span class="chip u">Unverified</span></td>
+      </tr>
+      <tr>
+        <td>Anthropic adapter end to end</td>
+        <td>Never exercised with a live key. Its retry comes from the official SDK rather than the shared helper, so the two providers have <em>different</em> retry semantics — deliberate, but not uniform and not tested.</td>
+        <td><span class="chip u">Unverified</span></td>
+      </tr>
+      <tr>
+        <td>Concurrency and load</td>
+        <td>Single-request paths only. The retry jitter's purpose — desynchronising concurrent callers — is therefore unproven.</td>
+        <td><span class="chip u">Unverified</span></td>
+      </tr>
+      <tr>
+        <td><strong>The request log stores no model outputs</strong></td>
+        <td>Only routing, tokens, cost and latency are recorded. Cost and latency are therefore auditable after the fact; <strong>answer quality is not</strong>. A retrospective quality spot-check over the 155 logged requests is impossible without re-running them and paying again — a direct consequence of the schema choice, and the first thing to change.</td>
+        <td><span class="chip u">Unverified</span></td>
+      </tr>
+      <tr>
+        <td>React pages</td>
+        <td>Exercised by hand against the running app; no component tests.</td>
+        <td><span class="chip u">Unverified</span></td>
+      </tr>
+      <tr>
+        <td>Request log on a serverless filesystem</td>
+        <td>Append-only JSONL assumes a persistent disk. A serverless deployment needs a real datastore; the read/write pair is the only surface that would change.</td>
+        <td><span class="chip u">Unverified</span></td>
+      </tr>
+      <tr>
+        <td>Pricing accuracy</td>
+        <td>Anthropic rates came from a published table; OpenAI and Google rates are hand-entered and unchecked. Tests confirm the arithmetic, never the inputs — every dollar figure inherits this caveat.</td>
+        <td><span class="chip u">Unverified</span></td>
+      </tr>
+      <tr>
+        <td>Classifier beyond the corpus</td>
+        <td>86.7% holdout on 149 examples, below the 200–500 the design targets, with 100% train accuracy indicating overfitting. Five misroutes tracked.</td>
+        <td><span class="chip m">Measured</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Standing assumptions that remain unverified</h3>
+  <ul>
+    <li>That prompts the classifier labels "simple" genuinely are simple enough
+      for the cheap tier — the premise the whole cost argument rests on.</li>
+    <li>That a 5% shadow sample represents the fast-path population. Four samples
+      is far too few to support that; the figure is a direction, not a result.</li>
+    <li>That the 60-prompt corpus resembles real traffic. It was hand-written,
+      so the 52% fast-path share is a property of the corpus, not of production.</li>
+    <li>That hand-written heuristics will not go stale or be gamed as prompt
+      patterns shift.</li>
+  </ul>
+</section>
+
+<!-- ============ 8. OUTCOMES ============ -->
+<section class="page">
+  <h2>7 · Outcomes, lessons, and next steps</h2>
+
+  <h3>What the project demonstrates</h3>
+  <ul>
+    <li>A working two-tier router whose pre-query stages make no network call,
+      measured at 0.07 ms warm.</li>
+    <li>A measured cost reduction of roughly 40% on a real workload, reported
+      with its sample size and its label attached rather than rounded into a
+      headline.</li>
+    <li>Latency separated by routing path, showing the escalated path genuinely
+      is slower (1499 ms p50 against 856 ms) and genuinely is a minority (6.5%) —
+      which is precisely the design's claim.</li>
+    <li>An observability pipeline built so the baseline is collected rather than
+      assumed, including the deliberate cost of shadow sampling.</li>
+    <li>136 offline tests across four layers, with a mutation check proving the
+      suite catches cost-only regressions.</li>
+  </ul>
+
+  <h3>Lessons</h3>
+  <ol>
+    <li><strong>Offline checks certify structure, not behaviour.</strong>
+      Typecheck, lint, build and 109 tests all passed while a model was
+      unreachable from one endpoint and the retry path did not exist. Every
+      finding that changed the design came from running the thing.</li>
+    <li><strong>An aggregate metric can conceal a systematic fault.</strong>
+      86.7% holdout accuracy looked healthy; running the corpus exposed five
+      misroutes sharing one diagnosable cause.</li>
+    <li><strong>Match the remedy to the cause.</strong> The design applied one
+      remedy to three signals. For the signal that fired most, that remedy cost
+      17× and fixed nothing.</li>
+    <li><strong>A plausible recommendation is not a verified one.</strong> The
+      Claude-tier proposal was well argued and wrong once the arithmetic
+      included the self-consistency tax.</li>
+    <li><strong>Measurement needs designing in.</strong> Had shadow sampling not
+      been built up front, there would be no baseline now — only an estimate
+      derived from token counts, which is exactly what the design set out to
+      avoid.</li>
+  </ol>
+
+  <h3>What I would do next, and why</h3>
+  <table class="d">
+    <thead><tr><th style="width:38mm">Next step</th><th>Why it comes first</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1. Build a quality eval</strong></td><td>Every cost claim is currently unanchored. A router that saves 40% while degrading answers is a worse product, and nothing in the project would currently detect that. This is the gap that most limits what the measured results mean.</td></tr>
+      <tr><td><strong>2. Measure the repair hit rate</strong></td><td>The field exists and logs nothing yet. A few hundred live requests would turn "reasoned" into "measured" and settle whether repair genuinely beats escalation.</td></tr>
+      <tr><td><strong>3. Raise shadow samples into double figures</strong></td><td>Four samples cannot support a precise savings figure. More volume — or a temporarily raised sample rate for a deliberate measurement run — would narrow the uncertainty.</td></tr>
+      <tr><td>4. Expand and rebalance the training set</td><td>149 examples with every complex case opening on an imperative produced a diagnosable bias. Targeted counter-examples should remove the five known misroutes.</td></tr>
+      <tr><td><strong>5. Log model outputs</strong></td><td>Without them no quality claim can ever be checked retrospectively, and step 1 cannot be done on existing traffic. Cheap to add; unblocks everything about quality.</td></tr>
+      <tr><td>6. Calibrate τ against real logprob distributions</td><td>The gate has never fired, so the threshold is currently decorative.</td></tr>
+      <tr><td>7. Verify the pricing table</td><td>Cheap to do, and every dollar figure depends on it.</td></tr>
+      <tr><td>8. Recorded fixtures for provider adapters</td><td>Would catch a provider changing response shape without needing live keys in CI.</td></tr>
+      <tr><td>9. Replace the JSONL log for deployment</td><td>Required before any serverless deployment; the interface is already narrow enough to swap.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 9. DEMO ============ -->
+<section class="page">
+  <h2>8 · Demo and repository</h2>
+
+  <h3>Repository</h3>
+  <p><code>github.com/Ghasanjaber/LLM-Evaluation-Platform</code></p>
+
+  <div class="box warn">
+    <div class="box-title">Status of the repository at the time of writing</div>
+    <p>The remote contains the router, the corpus, the design document and the
+    dashboard. The work described in §4 and §5 — the test suite, the schema-repair
+    path, the retry policy and the submission documentation — was complete and
+    verified locally but <strong>not yet committed or pushed</strong> when this
+    document was generated. Confirm the push before submitting, or the reviewer
+    will not see the test suite.</p>
+  </div>
+
+  <h3>Reproducing the offline demo — no API key, no spend</h3>
+  <pre>git clone https://github.com/Ghasanjaber/LLM-Evaluation-Platform.git
+cd LLM-Evaluation-Platform
+npm install
+npm run train:classifier     # fits the Stage 2 classifier from the seed set
+
+npm test                     # 136 tests, ~250 ms, fully offline
+npm run corpus               # routing over 60 prompts; prints the 5 tracked misroutes</pre>
+
+  <h3>Reproducing the live demo</h3>
+  <pre>cp .env.example .env.local   # add OPENAI_API_KEY
+npm run dev                  # terminal 1
+npm run corpus -- --live     # terminal 2 — about $0.03, ~5 min at 3 RPM</pre>
+
+  <p>Then at <code>http://localhost:3000/router</code>:</p>
+  <table class="d">
+    <thead><tr><th>Prompt</th><th>Expected path</th></tr></thead>
+    <tbody>
+      <tr><td>What is the capital of Norway?</td><td>Tier 1 fast path</td></tr>
+      <tr><td>Write a function that reverses a list</td><td>Stage 1 → Tier 2; Tier 1 never called</td></tr>
+      <tr><td>Give the ISO code for Norway <em>(regex <code>^[A-Z]{2}$</code>)</em></td><td>Schema failure → constrained repair → repaired or escalated</td></tr>
+    </tbody>
+  </table>
+
+  <p>Requires Node 18+ (developed on Node 24). <code>OPENAI_API_KEY</code> is the
+  only key the router needs; both tiers are OpenAI models.</p>
+
+  <div class="box">
+    <div class="box-title">No recorded video demo is included</div>
+    <p>This document ships with a real screenshot of the running dashboard over
+    genuine logged data (§4) and fully reproducible commands above. A recorded
+    walkthrough was not produced in time and is not claimed.</p>
+  </div>
+
+  <h3>Where the reasoning lives</h3>
+  <table class="d">
+    <thead><tr><th style="width:52mm">Document</th><th>Contents</th></tr></thead>
+    <tbody>
+      <tr><td><code>docs/architecture/cascade-router.md</code></td><td>The design document. §5 carries the remedy-by-signal amendment; §11 lists eleven points where the implementation diverges from the spec, each with its reason.</td></tr>
+      <tr><td><code>docs/SUBMISSION.md</code></td><td>Architecture summary, test inventory, limitations, demo steps.</td></tr>
+      <tr><td><code>README.md</code></td><td>Setup, measured results with provenance, testing strategy, and the "not tested, and why" table.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="foot">
+    Built with Claude Code. Claude Code generated most of the implementation;
+    the constraints, the decisions to reject or revise its output, and the
+    verification of every claim in this document were mine. Figures were
+    recomputed from the request log and the test reporter at the time of
+    writing, not copied from earlier summaries.
+  </div>
+</section>
+
+</body>
+</html>
